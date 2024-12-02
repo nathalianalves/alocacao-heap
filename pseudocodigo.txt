@@ -1,0 +1,63 @@
+-> Recebe argumento (numBytes) pelo rdi
+-> Salva rbx (seguindo os padrões)
+ALOCA:
+	nodoAtual = começo
+	topo = topo
+	bestFit = null
+	achouBestFit = 0
+	
+	for (começo ate topo) {
+		if ((nodoAtual) == 0) {
+			tamNodoAtual = (nodoAtual + 8) //Acessa o tamanho
+			if (tamNodoAtual >= numBytes) {
+				if (achouBestFit == 1) {
+					if ((nodoAtual) < tamBestFit) {
+						bestFit = nodo
+						tamBestFit = bestFit + 8
+					}
+				} else { 
+					bestFit = nodo
+					tamBestFit = (bestFit + 8)
+					achouBestFit = 1
+				}
+			}
+		}
+		
+		nodoAtual += 8 // Vai para o tamanho
+		tamNodoAtual = (nodoAtual)
+		nodoAtual += tamNodoAtual
+	}
+	
+	if (achouBestFit == 0) { 
+		disponivel = brk - topoHeap
+		if (disponivel >= 16 + numBytes) { 
+			(topoHeap) = 1
+			topoHeap += 8
+			(topoHeap) = numBytes
+			topoHeap += numBytes
+		} else { 
+			brk += 4096
+			(topoHeap) = 1
+			topoHeap += 8
+			(topoHeap) = numBytes
+			retorno = topoHeap + 8 // começo dos blocos usaveis
+			topoHeap += numBytes
+		}
+	} else { 
+		diferenca = tamBestFit - numBytes
+		(bestFit) = 1
+		bestFit += 8
+		(bestFit) = numBytes
+		proximoBlocoBestFit = bestFit + numBytes
+		if (diferenca > 16) { 
+			(proximoBlocoBestFit) = 0
+			proximoBlocoBestFit += 8
+			(proximoBlocoBestFit) = diferenca - 16 (-16 do segundo cabeçalho)
+		} else { 
+			(bestFit) += diferenca
+		}
+		
+		retorno = bestFit + 8
+	}
+	
+	retorne retorno
