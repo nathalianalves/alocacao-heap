@@ -1,16 +1,18 @@
 FLAGS = -g -Wall -no-pie
+MAIN = avalia
+ALOCADOR = alocadorFirstFit
 PROGRAMA = alocador
 
 all: $(PROGRAMA)
 
-$(PROGRAMA): exemplo.o alocador.o
-	gcc $(FLAGS) -o $(PROGRAMA) exemplo.o alocador.o
+$(PROGRAMA): $(MAIN).o $(ALOCADOR).o
+	gcc $(FLAGS) -o $(PROGRAMA) $(MAIN).o $(ALOCADOR).o
 
-exemplo.o: exemplo.c
-	gcc -c $(FLAGS) exemplo.c -o exemplo.o
+$(AVALIA).o: .c
+	gcc -c $(FLAGS) $(MAIN).c -o $(MAIN).o
 
-alocador.o: alocador.s alocador.h
-	as alocador.s -o alocador.o
+$(ALOCADOR).o: $(ALOCADOR).s alocador.h
+	as $(ALOCADOR).s -o $(ALOCADOR).o
 
 clean:
 	rm -f *.o $(PROGRAMA)

@@ -1,3 +1,5 @@
+# Alocador na heap utilizando o algoritmo worst fit
+
 .section .data
 	BRK: .quad 0
 	TOPO_INICIAL_HEAP: .quad 0
@@ -123,8 +125,8 @@ removeSequencias:
 # Aloca bytes
 # Mapeamento das variáveis locais:
 #	-8(%rbp) := nodoAtual 
-#	-16(%rbp) := bestFit
-#	-24(%rbp) := achouBestFit
+#	-16(%rbp) := worstFit
+#	-24(%rbp) := achouWorstFit
 #	-32(%rbp) := numBytes
 #	-40(%rbp) := salva rbx
 .globl alocaMem
@@ -138,8 +140,8 @@ alocaMem:
 	movq TOPO_INICIAL_HEAP, %rdx
 	movq %rdx, -8(%rbp) # começa a percorrer no começo da heap
 	movq TOPO_ATUAL_HEAP, %rax
-	movq %rax, -16(%rbp) # o primeiro bestFit (que será usado se nenhum outro for encontrado) é o topo atual
-	movq $0, -24(%rbp) # no inicio, ainda nao tem bestFit
+	movq %rax, -16(%rbp) # o primeiro worstFit (que será usado se nenhum outro for encontrado) é o topo atual
+	movq $0, -24(%rbp) # no inicio, ainda nao tem worstFit
 	movq %rdi, -32(%rbp) # numBytes = parametro
 	movq %rbx, -40(%rbp) # salva rbx
 
@@ -162,25 +164,25 @@ alocaMem:
 	cmpq -32(%rbp), %rax
 	jl proximoBlocoAlocaMem
 
-	# if (achouBestFit == 1) pula para bestFitEncontrado. Else pula para bestFitNaoEncontrado
+	# if (achouWorstFit == 1) pula para worstFitEncontrado. Else pula para worstFitNaoEncontrado
 	movq -24(%rbp), %rbx
 	cmpq $1, %rbx
-	je bestFitEncontrado
-	jmp bestFitNaoEncontrado
+	je worstFitEncontrado
+	jmp worstFitNaoEncontrado
 
-	bestFitEncontrado:
-	movq -16(%rbp), %rbx # rbx := bestFit ate agora
-	addq $8, %rbx # rbx := endereço do tamanho de bestFit
+	worstFitEncontrado:
+	movq -16(%rbp), %rbx # rbx := worstFit ate agora
+	addq $8, %rbx # rbx := endereço do tamanho de worstFit
 	movq (%rbx), %rdi
-	cmpq %rdi, %rax # compara tamanho do bestFit ate agora com o nodoAtual
-	jge proximoBlocoAlocaMem # se o tamanho do nodoAtual for maior ou igual ao bestFit, bestFit não é atualizado
+	cmpq %rdi, %rax # compara tamanho do worstFit ate agora com o nodoAtual
+	jle proximoBlocoAlocaMem # se o tamanho do nodoAtual for menor ou igual ao worstFit, worstFit não é atualizado
 
 	movq -8(%rbp), %rax
-	movq %rax, -16(%rbp) # se o tamanho de nodoAtual é menor do que bestFit, bestFit é atualizado
+	movq %rax, -16(%rbp) # se o tamanho de nodoAtual é maior do que worstFit, worstFit é atualizado
 	jmp proximoBlocoAlocaMem
 
-	# se nenhum bestFit foi encontrado até então, altera bestFit para o atual e achouBestFit = 1
-	bestFitNaoEncontrado:
+	# se nenhum worstFit foi encontrado até então, altera worstFit para o atual e achouWorstFit = 1
+	worstFitNaoEncontrado:
 	movq -8(%rbp), %rax
 	movq %rax, -16(%rbp)
 	movq $1, -24(%rbp)
@@ -195,12 +197,12 @@ alocaMem:
 	jmp whileAlocaMem # volta para o começo do while
 
 	fimWhileAlocaMem:
-	# se bestFit é o topo da heap atual, segue o mesmo fluxo. Se não é, lida com o bloco que vai ser separado
+	# se worstFit é o topo da heap atual, segue o mesmo fluxo. Se não é, lida com o bloco que vai ser separado
 	movq TOPO_ATUAL_HEAP, %rdi
 	cmpq -16(%rbp), %rdi
-	jne separaBestFitAlocaMem
+	jne separaWorstFitAlocaMem
 
-	# CASO 1: bestFit é o topo atual da heap
+	# CASO 1: worstFit é o topo atual da heap
 	movq TOPO_ATUAL_HEAP, %r14 # r14 salva topo da heap (que será atualizado)
 	addq $16, TOPO_ATUAL_HEAP # abre espaço para as informações gerenciais
 	movq -32(%rbp), %rbx # rbx := espaço solicitado
@@ -214,7 +216,6 @@ alocaMem:
 
 	# altera o brk para o primeiro multiplo de 4096 maior que TOPO_ATUAL_HEAP
 	movq TOPO_ATUAL_HEAP, %rax
-	# addq -32(%rbp), %rax # rax := topoHeap + numBytes
 	movq BRK, %rdi
 	WhileAcharMultiplo:
 	addq $4096, %rdi
@@ -230,19 +231,19 @@ alocaMem:
 	movq %rbx, (%r14) # tamanho do bloco novo := numBytes
 	jmp fimAlocaMem
 
-	# CASO 2: bestFit é um bloco que já existe
-	separaBestFitAlocaMem:
-	movq -16(%rbp), %rax # rax := bestFit
+	# CASO 2: worstFit é um bloco que já existe
+	separaWorstFitAlocaMem:
+	movq -16(%rbp), %rax # rax := worstFit
 	movq %rax, %rbx
-	addq $8, %rbx # rbx := endereço do tamanho de bestFit
-	movq (%rbx), %r10 # r10 := tamanho de bestFit
+	addq $8, %rbx # rbx := endereço do tamanho de worstFit
+	movq (%rbx), %r10 # r10 := tamanho de worstFit
 	movq %r10, %r11 
-	subq -32(%rbp), %r11 # r11 := diferença entre tamanho de bestFit e tamanho pedido
+	subq -32(%rbp), %r11 # r11 := diferença entre tamanho de worstFit e tamanho pedido
 	cmpq $16, %r11
 	jle fimAlocaMem # se, usando os bytes pedidos, não sobrar espaço para informações gerenciais + bytes usaveis, nao separa o bloco
 
 	# Configura o bloco novo (o segundo)
-	addq $8, %rbx # rbx := fim dos bytes de informações gerenciais em bestFit
+	addq $8, %rbx # rbx := fim dos bytes de informações gerenciais em worstFit
 	addq -32(%rbp), %rbx # rbx := começo do bloco a ser criado
 	movq $0, (%rbx) # bloco novo é livre
 	subq $16, %r11 # r11 := tamanho do segundo bloco (-16 das informações gerenciais)
@@ -256,7 +257,7 @@ alocaMem:
 	movq %r12, (%rbx) # tamanho do bloco pedido = numBytes
 
 	fimAlocaMem:
-	movq -16(%rbp), %rax # rax = bestFit (retorno)
+	movq -16(%rbp), %rax # rax = worstFit (retorno)
 	movq $1, (%rax) # 1a informação gerencial do retorno = 1 (bloco usado)
 	addq $16, %rax # rax = começo dos bytes usaveis do bloco pedido
 	movq -40(%rbp), %rbx # restaura rbx
@@ -321,6 +322,14 @@ imprimeMapa:
 	jmp whileimprimeMapa
 
 	fimWhileimprimeMapa:
+	pushq $'\n' # imprime uma nova linha
+	movq $1, %rax
+	movq $1, %rdi
+	movq %rsp, %rsi
+	movq $1, %rdx
+	syscall
+	addq $8, %rsp
+
 	pushq $'\n' # imprime uma nova linha
 	movq $1, %rax
 	movq $1, %rdi
